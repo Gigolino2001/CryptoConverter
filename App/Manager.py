@@ -107,6 +107,7 @@ class Manager:
         return flag1 and flag2
 
     def convert_tofiat(self, origin, quantity, destination):
+        ''' For Menu option 3 '''
         params_origin = {
             'symbol': '',
             'convert':''
