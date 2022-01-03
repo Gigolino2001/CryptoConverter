@@ -1,2 +1,2 @@
-#Assign your API Key here
-key = 
+key = #Assign your API Key here
+ 
