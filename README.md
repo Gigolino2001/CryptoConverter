@@ -63,4 +63,4 @@ python "app.py"
 
 
 ## License
-- [License](https://github.com/Gigolino2001/CryptoConverter/blob/main/LICENSE)
+- [MIT License](https://github.com/Gigolino2001/CryptoConverter/blob/main/LICENSE)
