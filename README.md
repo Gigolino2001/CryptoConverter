@@ -39,6 +39,15 @@ To grab the key the user must:
 
     In your machine, make sure that you have python installed, if not:
   - [Python Instalation Guide](https://www.python.org/downloads/)
+
+- Install Requests:
+    
+    Make sure that you install Requests after python:
+
+```bash
+python -m pip install requests
+ ```
+ 
 - Open the console in your machine and run the follow commands:
 
 ```bash
