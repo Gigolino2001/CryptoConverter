@@ -2,21 +2,32 @@ import requests
 import json
 from pathlib import Path
 
-#************************CONFIG*******************************
-key = None  #Assign your API Key here
+#************************CONFIG*************************************************
+#Put your API Key here
+KEY = None 
 
-cache_path = '' #Path to where the cache file will be stored 
-#*************************************************************
+# Cache Paths ---> include the name of the file, example: 'cache_coin.json' or 'caches/cache_coin.json'
+#  
+# WARNING: it assumes the whole path exists, except the file THAT may be overwritten if it already exists or created if it doesn't
+#
+# Path where the coin info cache file will be stored 
+CACHE_COIN_PATH = '' 
+
+#Path where the fiat coin info cache file will be stored
+CACHE_FIAT_PATH = '' 
+
+#*******************************************************************************
 
 headers = {
-    'X-CMC_PRO_API_KEY': key,
+    'X-CMC_PRO_API_KEY': KEY,
     'Accepts' : 'application/json'
 }
 
-url_id_map = ' https://pro-api.coinmarketcap.com/v1/cryptocurrency/map'
+assert CACHE_FIAT_PATH != CACHE_COIN_PATH, 'The two cache path indicated can\'t be equal'
+url_crypto_ids_map = ' https://pro-api.coinmarketcap.com/v1/cryptocurrency/map'
 url_coin = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 url_specific_query = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
-url_fiat = 'https://pro-api.coinmarketcap.com/v1/fiat/map'
+url_fiat_ids_map = 'https://pro-api.coinmarketcap.com/v1/fiat/map'
 url_info = 'https://pro-api.coinmarketcap.com/v1/key/info'
 class Manager:
     def __init__(self):
@@ -31,24 +42,36 @@ class Manager:
         self.__coin = ''
         self.__fiat = ''
         self.__coin_infos = ''
+        self.__fiat_infos = ''
         #Fails if the key is left as None
-        if key == None:
+        if KEY == None:
             raise ValueError('CoinMarketCap API Key not set! (change the \'key\' variable on the file Manager.py)')
         #loads cache if the file already exists defaults the cache file to folder where the file is located
-        global cache_path
-        if cache_path == '':
-            cache_path = 'coin_info_cache.json'
-        if Path(cache_path).exists():
-                with open(cache_path, 'r') as cached:
+        
+        global CACHE_COIN_PATH
+        global CACHE_FIAT_PATH
+
+        if CACHE_COIN_PATH == '':
+            CACHE_COIN_PATH = 'coin_info_cache.json'
+
+        if Path(CACHE_COIN_PATH).exists():
+                with open(CACHE_COIN_PATH, 'r') as cached:
                     self.__coin_infos   = json.load(cached)
+
+
+        if CACHE_FIAT_PATH == '':
+            CACHE_FIAT_PATH = 'fiat_info_cache.json'
+    
+        if Path(CACHE_FIAT_PATH).exists():
+                with open(CACHE_FIAT_PATH, 'r') as cached:
+                    self.__fiat_infos   = json.load(cached)
         
     def showall(self):
         ''' For Menu option 1 '''
         if self.__coin_infos == '':
-            print('Cache file not found, update cache or abort?' + '')
+            print('Cache file not found, update cache or abort?')
             while True:
                 try:
-                    
                     option = input('Enter your choice[U/a]:')
                     clean = option.lower().strip()
                     if clean in ['','u']:
@@ -69,7 +92,6 @@ class Manager:
         coins = json_info['data']
         count = 1
         limit = int(self.__params_coins['limit'])+1
-        limit_strlen = len(self.__params_coins['limit'])-1
         for i in coins:
             if count == limit:
                 break
@@ -86,6 +108,7 @@ class Manager:
         ''' For Menu option 2 '''
         origin_coin = origin_coin.upper().strip()
         destination_coin = destination_coin.upper().strip()
+
         request = requests.get(url_coin, params=self.__params_coins, headers=headers)
         if request.status_code == 200:
             json_info = request.json()
@@ -120,7 +143,7 @@ class Manager:
     def show_fiats(self):
         ''' For Menu option 3 '''
 
-        json = requests.get(url_fiat, params=self.__params_fiats, headers=headers).json()
+        json = requests.get(url_fiat_ids_map, params=self.__params_fiats, headers=headers).json()
         fiats = json['data']
         result = '['
         for i in fiats:
@@ -133,7 +156,7 @@ class Manager:
         origin = origin.upper().strip()
         destination = destination.upper().strip()
         json1 = requests.get(url_coin, params=self.__params_coins, headers=headers).json()
-        json2 = requests.get(url_fiat, params=self.__params_fiats, headers=headers).json()
+        json2 = requests.get(url_fiat_ids_map, params=self.__params_fiats, headers=headers).json()
         coins = json1['data']
         fiats = json2['data']
         flag1, flag2 = False, False
@@ -174,8 +197,8 @@ class Manager:
             coin_origin = json['data'][self.__coin]['quote'][self.__fiat]['price']
             return quantity/coin_origin
     
-    def update_cache(self):
-        '''For menu option 4'''
+    def update_cache(self,cache_to_update):
+        '''For menu option 4 '''
         try:
             failed_request = True
             if self.get_current_apikey_credits()[1] == 0:
@@ -185,41 +208,51 @@ class Manager:
                     print('Daily credit reset i' + eta_for_reset[1:])
                 raise Exception
             elif self.get_current_apikey_credits() is None:
-                print('Couldn\'t assess if you currently have API credits left')
+                print('Error while checking if you currently have API credits left')
                 while True:
                     try:
-                        print('Cache file not found, update cache or abort?' + '')
+                        print('Do you still want to try to update the cache or abort?')
                         option = input('Enter your choice[U/a]:')
                         clean = option.lower().strip()
                         if clean in ['','u']:
-                            self.update_cache()
                             break
                         elif clean == 'a':
                             return
                         else:
-                            raise ValueError()
-                    except ValueError:
+                            raise Exception
+                    except :
                         print('Can\'t recognize this option')    
 
-            with open(cache_path,'w+') as cached:
-                request = requests.get(url_id_map, headers=headers)
+            with open(cache_to_update,'w+') as cached:
+                if cache_to_update == CACHE_COIN_PATH:
+                    request = requests.get(url_crypto_ids_map, headers=headers)
+                elif cache_to_update == CACHE_FIAT_PATH:
+                    request = requests.get(url_fiat_ids_map, headers=headers)
                 if request.status_code == 200:
                     json_info = request.json()
                     json.dump(json_info,cached)
                     cached.seek(0)
-                    self.__coin_infos = json.load(cached)
+                    if cache_to_update == CACHE_COIN_PATH:
+                        self.__coin_infos = json.load(cached)
+                    elif cache_to_update == CACHE_FIAT_PATH:
+                        self.__fiat_infos == json.load(cached)
                     print('Cache updated successfully!')
                     failed_request = False
             if failed_request:
                 raise Exception                    
         except:
-            self.__coin_infos = ''
+            if cache_to_update == CACHE_COIN_PATH:
+                self.__coin_infos = ''
+            elif cache_to_update == CACHE_FIAT_PATH:
+                self.__fiat_infos = ''
             print('Cache update failed!')
             return False
+
 
     def show_apikey_info(self):
         pass
         #json = requests.get(url_info, params=self.__params_coins, headers=headers).json()
+
 
     def get_current_apikey_credits(self):
         '''Helper function that returns both the amount of credits used and the amount left '''
@@ -229,8 +262,10 @@ class Manager:
             return (json_info['data']['usage']['current_day']['credits_used'],json_info['data']['usage']['current_day']['credits_left'])
         else:
             return False
+
+    
     def get_eta_daily_reset(self):
-        '''Helper function that returns a string containing the ETA fro '''
+        '''Helper function that returns a string containing the ETA for the daily API credits reset'''
         request = requests.get(url_info, headers=headers)
         if request.status_code == 200:
             json_info = request.json()

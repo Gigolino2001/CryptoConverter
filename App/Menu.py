@@ -2,7 +2,7 @@ from Manager import Manager
 class Menu:
     def __init__(self):
         self.__options = {
-            1:'Show available coins (and their Symbol and CoinMarketCap id)', #DONE
+            1:'Show available Cryptocurrencies (and their Symbol and CoinMarketCap id)', #DONE
             2:'Convert Crypto <-> Crypto', #DONE
             3:'Convert Crypto <-> Fiat',
             4:'Update cache',
