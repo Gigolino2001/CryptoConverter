@@ -1,4 +1,4 @@
-from Manager import Manager
+from Manager import CACHE_COIN_PATH, CACHE_FIAT_PATH, Manager
 class Menu:
     def __init__(self):
         self.__options = {
@@ -25,7 +25,7 @@ class Menu:
                 option = input('Enter your choice[Y/n]:')
                 clean = option.lower().strip()
                 if clean in ["","y"]:
-                    manager.update_cache()
+                    manager.update_caches()
                     break
                 elif clean == "n":
                     break
@@ -83,8 +83,34 @@ class Menu:
                     result = manager.convert_tofiat(origin, quantity, destination)
                     print(quantity, origin.upper().strip() + " = " + str(round(result, 5)), destination.upper().strip() +"\n") 
             elif option == 4:
-                manager.update_cache()
-            
+                options = {
+                    1: 'Update Cryptocurrencies cache only',
+                    2: 'Update fiat cache only',
+                    3: 'Update both caches',
+                    4: 'Return to main menu'
+                }
+                while True:
+                    try:
+                        print("CACHE UPDATE OPTIONS")
+                        for key,text in options.items():
+                            print(str(key) + ':',text)
+                        suboption = int(input('Enter your choice:'))
+                        
+                        assert 0 < suboption < 5
+
+                        if suboption == 1:
+                            manager.update_cache(CACHE_COIN_PATH)
+                        elif suboption == 2:
+                            manager.update_cache(CACHE_FIAT_PATH)
+                        elif suboption == 3:
+                            manager.update_caches()
+                        elif suboption == 4:
+                            break
+                        else:
+                            raise Exception
+                        break
+                    except:
+                        print("Can't recognize this option")
             elif option == 5:
                 pass
             elif option == 6:

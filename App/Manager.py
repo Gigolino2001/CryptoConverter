@@ -4,8 +4,7 @@ from pathlib import Path
 
 #************************CONFIG*************************************************
 #Put your API Key here
-KEY = None 
-
+KEY = None
 # Cache Paths ---> include the name of the file, example: 'cache_coin.json' or 'caches/cache_coin.json'
 #  
 # WARNING: it assumes the whole path exists, except the file THAT may be overwritten if it already exists or created if it doesn't
@@ -23,7 +22,9 @@ headers = {
     'Accepts' : 'application/json'
 }
 
-assert CACHE_FIAT_PATH != CACHE_COIN_PATH, 'The two cache path indicated can\'t be equal'
+assert CACHE_FIAT_PATH != CACHE_COIN_PATH, 'The two cache paths indicated can\'t be equal'
+assert KEY != None,'CoinMarketCap API Key not set! (change the \'key\' variable on the file Manager.py)'        
+
 url_crypto_ids_map = ' https://pro-api.coinmarketcap.com/v1/cryptocurrency/map'
 url_coin = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 url_specific_query = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
@@ -43,11 +44,6 @@ class Manager:
         self.__fiat = ''
         self.__coin_infos = ''
         self.__fiat_infos = ''
-        #Fails if the key is left as None
-        if KEY == None:
-            raise ValueError('CoinMarketCap API Key not set! (change the \'key\' variable on the file Manager.py)')
-        #loads cache if the file already exists defaults the cache file to folder where the file is located
-        
         global CACHE_COIN_PATH
         global CACHE_FIAT_PATH
 
@@ -75,14 +71,14 @@ class Manager:
                     option = input('Enter your choice[U/a]:')
                     clean = option.lower().strip()
                     if clean in ['','u']:
-                        if not self.update_cache():
-                            break
+                        self.update_cache(CACHE_COIN_PATH)
                         break
                     elif clean == 'a':
                         return
                     else:
-                        raise ValueError()
-                except ValueError:
+                        print('Enter a valid value!')
+                        raise Exception
+                except:
                     print('Can\'t recognize this option')     
         
         if self.__coin_infos == '':
@@ -142,12 +138,31 @@ class Manager:
 
     def show_fiats(self):
         ''' For Menu option 3 '''
+        if self.__fiat_infos == '':
+            print('Cache file not found, update cache or abort?')
+            while True:
+                try:
+                    option = input('Enter your choice[U/a]:')
+                    clean = option.lower().strip()
+                    if clean in ['','u']:
+                        self.update_cache(CACHE_FIAT_PATH)
+                        break
+                    elif clean == 'a':
+                        return
+                    else:
+                        print('Enter a valid value!')
+                        raise Exception
+                except:
+                    print('Can\'t recognize this option')     
+        
+        if self.__coin_infos == '':
+            print('Can\'t show listing')
+            return
 
-        json = requests.get(url_fiat_ids_map, params=self.__params_fiats, headers=headers).json()
-        fiats = json['data']
+        fiats = self.__fiat_infos['data']
         result = '['
         for i in fiats:
-            result = result + i['symbol'] + ', '
+            result = result + i['symbol'] + ' id: ' + i['id'] + ', '
         result = result[:-2] + ']'
         print(result)
 
@@ -248,6 +263,10 @@ class Manager:
             print('Cache update failed!')
             return False
 
+
+    def update_caches(self):
+        self.update_cache(CACHE_COIN_PATH)
+        self.update_cache(CACHE_FIAT_PATH)
 
     def show_apikey_info(self):
         pass
