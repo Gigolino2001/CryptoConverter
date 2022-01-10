@@ -11,8 +11,10 @@ class Menu:
         }
         
 
-    def print_menu(self):
+    def print_menu(self,manager):
         print('\t   MENU ')
+        api_info = manager.get_current_apikey_credits()
+        print('API Credits remaining: '+str(api_info[1]) + '/' + str(api_info[0]+ api_info[1]))
         for key in self.__options.keys():
             print(str(key) + ':', self.__options[key])
 
@@ -35,7 +37,7 @@ class Menu:
                 print("Can't recognize this option")
 
         while True:
-            self.print_menu()
+            self.print_menu(manager)
             option = ''
             try:
                 option = int(input('Enter your choice:'))
@@ -49,7 +51,7 @@ class Menu:
                     limit = int(input("Enter the limit: "))
                     assert 1 <= limit
                     manager.setlimit(limit)
-                    manager.showall()
+                    manager.showall_coins()
                 except (AssertionError, ValueError, KeyError):
                     print("Enter a valid limit")
                     continue
@@ -69,7 +71,8 @@ class Menu:
                     result = manager.convert_tocrypto(origin_coin, quantity_oc, destination_coin)
                     print(quantity_oc, origin_coin.upper().strip() + " = " + str(round(result, 5)), destination_coin.upper().strip() +"\n") 
             elif option == 3:
-                manager.show_fiats()
+                if manager.show_fiats() == None:
+                    continue
                 try:
                     origin = str(input("Convert from: "))
                     quantity = float(input("Insert amount: "))
@@ -84,9 +87,9 @@ class Menu:
                     print(quantity, origin.upper().strip() + " = " + str(round(result, 5)), destination.upper().strip() +"\n") 
             elif option == 4:
                 options = {
-                    1: 'Update Cryptocurrencies cache only',
-                    2: 'Update fiat cache only',
-                    3: 'Update both caches',
+                    1: 'Update Cryptocurrencies cache only [1 API credit]',
+                    2: 'Update fiat cache only [1 API credit]',
+                    3: 'Update both caches  [2 API credits]',
                     4: 'Return to main menu'
                 }
                 while True:
@@ -95,7 +98,7 @@ class Menu:
                         for key,text in options.items():
                             print(str(key) + ':',text)
                         suboption = int(input('Enter your choice:'))
-                        
+
                         assert 0 < suboption < 5
 
                         if suboption == 1:
@@ -107,12 +110,12 @@ class Menu:
                         elif suboption == 4:
                             break
                         else:
-                            raise Exception
+                            raise ValueError
                         break
-                    except:
+                    except (ValueError,AssertionError):
                         print("Can't recognize this option")
             elif option == 5:
-                pass
+                manager.show_apikey_info()
             elif option == 6:
                 print("Success!\nExiting...")
                 exit()

@@ -1,21 +1,9 @@
 import requests
 import json
 from pathlib import Path
+from config import KEY,CACHE_COIN_PATH,CACHE_FIAT_PATH
 
-#************************CONFIG*************************************************
-#Put your API Key here
-KEY = None
-# Cache Paths ---> include the name of the file, example: 'cache_coin.json' or 'caches/cache_coin.json'
-#  
-# WARNING: it assumes the whole path exists, except the file THAT may be overwritten if it already exists or created if it doesn't
-#
-# Path where the coin info cache file will be stored 
-CACHE_COIN_PATH = '' 
 
-#Path where the fiat coin info cache file will be stored
-CACHE_FIAT_PATH = '' 
-
-#*******************************************************************************
 
 headers = {
     'X-CMC_PRO_API_KEY': KEY,
@@ -30,6 +18,7 @@ url_coin = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 url_specific_query = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
 url_fiat_ids_map = 'https://pro-api.coinmarketcap.com/v1/fiat/map'
 url_info = 'https://pro-api.coinmarketcap.com/v1/key/info'
+
 class Manager:
     def __init__(self):
         self.__params_coins = {
@@ -44,25 +33,29 @@ class Manager:
         self.__fiat = ''
         self.__coin_infos = ''
         self.__fiat_infos = ''
+
         global CACHE_COIN_PATH
         global CACHE_FIAT_PATH
 
         if CACHE_COIN_PATH == '':
             CACHE_COIN_PATH = 'coin_info_cache.json'
+        elif Path(CACHE_COIN_PATH).is_dir():
+            CACHE_COIN_PATH = str(Path(CACHE_COIN_PATH).joinpath('coin_info_cache.json)'))
 
         if Path(CACHE_COIN_PATH).exists():
                 with open(CACHE_COIN_PATH, 'r') as cached:
                     self.__coin_infos   = json.load(cached)
 
-
         if CACHE_FIAT_PATH == '':
             CACHE_FIAT_PATH = 'fiat_info_cache.json'
-    
+        elif Path(CACHE_FIAT_PATH).is_dir():
+            CACHE_FIAT_PATH = str(Path(CACHE_FIAT_PATH).joinpath('fiat_info_cache.json)'))
+
         if Path(CACHE_FIAT_PATH).exists():
                 with open(CACHE_FIAT_PATH, 'r') as cached:
                     self.__fiat_infos   = json.load(cached)
         
-    def showall(self):
+    def showall_coins(self):
         ''' For Menu option 1 '''
         if self.__coin_infos == '':
             print('Cache file not found, update cache or abort?')
@@ -77,8 +70,8 @@ class Manager:
                         return
                     else:
                         print('Enter a valid value!')
-                        raise Exception
-                except:
+                        raise ValueError
+                except ValueError:
                     print('Can\'t recognize this option')     
         
         if self.__coin_infos == '':
@@ -95,11 +88,46 @@ class Manager:
             count += 1
         print()
 
-    def setlimit (self, value):
+    def showall_fiats(self):
+        ''' For Menu option ? '''
+        if self.__fiat_infos == '':
+            print('Cache file not found, update cache or abort?')
+            while True:
+                try:
+                    option = input('Enter your choice[U/a]:')
+                    clean = option.lower().strip()
+                    if clean in ['','u']:
+                        self.update_cache(CACHE_FIAT_PATH)
+                        break
+                    elif clean == 'a':
+                        return
+                    else:
+                        print('Enter a valid value!')
+                        raise ValueError
+                except ValueError:
+                    print('Can\'t recognize this option')     
+        
+        if self.__fiat_infos == '':
+            print('Can\'t show listing')
+            return 
+        json_info = self.__fiat_infos
+        fiats = json_info['data']
+        count = 1
+        limit = int(self.__params_fiats['limit'])+1
+        for i in fiats:
+            if count == limit:
+                break
+            print(str(count) + ':', i['name'], '(' + i['symbol'] + ')', '\tid: '+ str(i['id']))
+            count += 1
+        print()
+
+    def setlimit_coins(self, value):
         ''' For Menu option 1 '''
         self.__params_coins['limit'] = str(value)
 
- 
+    def setlimit_fiats(self,value):
+        ''' For Menu option ?'''
+        self.__params_fiats['limit'] = str(value)
     def verifyCrypto(self, origin_coin, destination_coin):
         ''' For Menu option 2 '''
         origin_coin = origin_coin.upper().strip()
@@ -148,23 +176,25 @@ class Manager:
                         self.update_cache(CACHE_FIAT_PATH)
                         break
                     elif clean == 'a':
-                        return
+                        return None
                     else:
                         print('Enter a valid value!')
-                        raise Exception
-                except:
-                    print('Can\'t recognize this option')     
-        
+                        raise ValueError
+                except ValueError:
+                    print('Can\'t recognize this option')
+
         if self.__coin_infos == '':
             print('Can\'t show listing')
-            return
+            return None
 
         fiats = self.__fiat_infos['data']
         result = '['
         for i in fiats:
-            result = result + i['symbol'] + ' id: ' + i['id'] + ', '
+            result = result + i['symbol'] + ' id: ' + str(i['id']) + ', '
+            #print(i['name'], '(' + i['symbol'] + ')', '\tid: '+ str(i['id']))
         result = result[:-2] + ']'
         print(result)
+        return True
 
     def verifyFiat(self, origin, destination):
         ''' For Menu option 3 '''
@@ -269,16 +299,28 @@ class Manager:
         self.update_cache(CACHE_FIAT_PATH)
 
     def show_apikey_info(self):
-        pass
-        #json = requests.get(url_info, params=self.__params_coins, headers=headers).json()
+        request = requests.get(url_info, headers=headers)
+        apikey_info =  request.json()
+
+        if request.status_code == 200:
+            print('YOUR PLAN INFO:')
+            print('Daily credits remaining :  ','\t' + str(apikey_info['data']['usage']['current_day']['credits_left']))
+            print('Daily credits included :   ','\t' + str(apikey_info['data']['plan']['credit_limit_daily']) + '\t',' Resets i'+apikey_info['data']['plan']['credit_limit_daily_reset'][1:])
+            print('Monthly credits included : ','\t' + str(apikey_info['data']['plan']['credit_limit_monthly']) +'\t',' Resets i' + apikey_info['data']['plan']['credit_limit_monthly_reset'][1:])
+            print('Requests rate limit :      ','\t' + str(apikey_info['data']['plan']['rate_limit_minute']) + '\t',' Requests per minute')
+        
+        else:  
+
+            print('Request failed got HTTP status code ' + str(request.status_code) ,'Got API Error "' + str(apikey_info['status']['error_code']) + ' ' + apikey_info['status']['error_message']  +  '" while trying to fetch your API key info' )
+
 
 
     def get_current_apikey_credits(self):
         '''Helper function that returns both the amount of credits used and the amount left '''
         request = requests.get(url_info, headers=headers)
         if request.status_code == 200:
-            json_info = request.json()
-            return (json_info['data']['usage']['current_day']['credits_used'],json_info['data']['usage']['current_day']['credits_left'])
+            json_info = request.json()['data']['usage']['current_day']
+            return (json_info['credits_used'],json_info['credits_left'])
         else:
             return False
 
